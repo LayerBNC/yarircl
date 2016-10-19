@@ -1,0 +1,8 @@
+[package]
+name = "irc"
+version = "0.1.0"
+authors = ["Alexandre Oliveira <rockytvbr@gmail.com>"]
+license = "MIT"
+
+[dependencies]
+bufstream = "0.1.2"
