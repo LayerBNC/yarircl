@@ -57,6 +57,8 @@ impl PartialEq for IrcMessage {
     }
 }
 
+// Thanks SirCmpwn for his awesome and simple way to parse IRC messages!
+// https://github.com/SirCmpwn/ChatSharp/blob/master/ChatSharp/IrcMessage.cs
 impl FromStr for IrcMessage {
     type Err = String;
     fn from_str(s: &str) -> Result<IrcMessage, String> {
