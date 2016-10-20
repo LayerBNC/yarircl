@@ -17,3 +17,21 @@ fn test_irc_message_from_str() {
 
     assert_eq!(correct, generated);
 }
+
+#[test]
+fn test_irc_user_instantiate() {
+    let correct = IrcUser {
+        nick: String::from("nick"),
+        user: String::from("username"),
+        real_name: String::from("real name"),
+        hostname: String::new(),
+        nickserv_password: String::from("password")
+    };
+
+    let mut new_user = IrcUser::new("nick", "username", "real name");
+    new_user.set_password("password");
+
+    println!("{:?}", new_user);
+
+    assert_eq!(correct, new_user);
+}

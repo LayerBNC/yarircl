@@ -1,10 +1,10 @@
 extern crate bufstream;
 
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::net::TcpStream;
-pub use std::str::FromStr;
-use bufstream::BufStream;
-
 mod message;
+mod user;
+mod client;
+
+pub use std::str::FromStr;
 pub use message::{IrcMessage, NumericReply};
+pub use user::IrcUser;
+pub use client::IrcClient;
