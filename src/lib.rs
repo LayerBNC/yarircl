@@ -7,4 +7,4 @@ mod client;
 pub use std::str::FromStr;
 pub use message::{IrcMessage, NumericReply};
 pub use user::IrcUser;
-pub use client::IrcClient;
+pub use client::{IrcClient, IrcWrite};
