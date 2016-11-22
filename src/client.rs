@@ -29,9 +29,11 @@ impl <A: ToSocketAddrs> IrcClient<A> {
         let stream = TcpStream::connect(&self.server).unwrap();
         let mut bufstream = BufStream::new(stream);
 
-        bufstream.write(&format!("NICK {}\r\n", self.user.nick).as_bytes()).unwrap();
-        bufstream.write(&format!("USER {} 0 * :{}\r\n", self.user.user, self.user.real_name).as_bytes()).unwrap();
-        bufstream.flush();
+        bufstream.send_raw_message(&format!("NICK {}\r\n", self.user.nick));
+        bufstream.send_raw_message(&format!("USER {} 0 * :{}\r\n", self.user.user, self.user.real_name));
+        if self.user.nickserv_password.len() > 0 {
+            bufstream.identify("nickserv", &self.user.nickserv_password);
+        }
 
         self.connected = true;
         return bufstream;
