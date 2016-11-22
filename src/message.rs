@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum NumericReply {
     RPL_WELCOME = 1,
     RPL_YOURHOST,
@@ -11,6 +11,7 @@ pub enum NumericReply {
     RPL_MOTD = 372,
     RPL_ENDOFMOTD = 376,
     ERR_NOSUCHNICK = 401,
+    PING = 65533,
     PRIVMSG = 65534,
     NOTICE = 65535,
     NONE = -1,
@@ -28,6 +29,7 @@ impl FromStr for NumericReply {
             "003" => Ok(NumericReply::RPL_CREATED),
             "004" => Ok(NumericReply::RPL_MYINFO),
             "005" => Ok(NumericReply::RPL_BOUNCE_OR_SERVER_INFO),
+            "PING" => Ok(NumericReply::PING),
             _ => Ok(NumericReply::NONE)
         }
     }

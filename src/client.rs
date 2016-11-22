@@ -1,5 +1,5 @@
 use user::IrcUser;
-use message::IrcMessage;
+use message::{IrcMessage, NumericReply};
 use std::net::{ToSocketAddrs, TcpStream};
 use std::io::*;
 use std::str::FromStr;
@@ -44,6 +44,12 @@ impl <A: ToSocketAddrs> IrcClient<A> {
                 Ok(x) => x,
                 Err(e) => return false
             };
+
+            if message.command == NumericReply::PING {
+                let reply = &format!("PONG :{reply}", reply=message.params[0]);
+                stream.send_raw_message(reply);
+            }
+
             self.messages.push(message);
             return true;
         } 
