@@ -28,7 +28,7 @@ impl FromStr for NumericReply {
             "003" => Ok(NumericReply::RPL_CREATED),
             "004" => Ok(NumericReply::RPL_MYINFO),
             "005" => Ok(NumericReply::RPL_BOUNCE_OR_SERVER_INFO),
-            _ => Err(())
+            _ => Ok(NumericReply::NONE)
         }
     }
 }
