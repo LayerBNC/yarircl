@@ -53,3 +53,37 @@ impl <A: ToSocketAddrs> IrcClient<A> {
         }
     }
 }
+
+pub trait IrcWrite {
+    fn send_raw_message(&mut self, msg: &str) -> Result<usize>;
+    fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize>;
+    fn identify(&mut self, ns_name: &str, password: &str) -> Result<usize>;
+}
+
+impl<S: Read + Write> IrcWrite for BufStream<S> {
+    fn send_raw_message(&mut self, msg: &str) -> Result<usize> {
+        let mut message = String::from(msg);
+        message = message + "\r\n";
+
+        let write_result = self.write(message.as_bytes());
+        let flush_result = self.flush();
+
+        write_result
+    }
+
+    fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize> {
+        let mut message = String::from("PRIVMSG ");
+        message += destination;
+        message += " :";
+        message += msg;
+
+        self.send_raw_message(&message)
+    }
+
+    fn identify(&mut self, ns_name: &str, password: &str) -> Result<usize> {
+        let mut message = String::from("identify ");
+        message += password;
+
+        self.send_message(ns_name, &message)
+    }
+}
