@@ -10,7 +10,8 @@ pub struct IrcClient<A: ToSocketAddrs> {
     pub server: A,
     pub user: IrcUser,
     pub connected: bool,
-    pub messages: Vec<IrcMessage>
+    pub messages: Vec<IrcMessage>,
+    pub server_motd: String
 }
 
 impl <A: ToSocketAddrs> IrcClient<A> {
@@ -19,13 +20,17 @@ impl <A: ToSocketAddrs> IrcClient<A> {
             server: server,
             user: user,
             connected: false,
-            messages: Vec::new()
+            messages: Vec::new(),
+            server_motd: String::new()
         };
 
         return client;
     }
 
     pub fn connect(&mut self) -> BufStream<TcpStream> {
+        self.server_motd = String::new();
+        self.messages.clear();
+
         let stream = TcpStream::connect(&self.server).unwrap();
         let mut bufstream = BufStream::new(stream);
 
@@ -46,6 +51,12 @@ impl <A: ToSocketAddrs> IrcClient<A> {
                 Ok(x) => x,
                 Err(e) => return false
             };
+
+            if message.command == NumericReply::RPL_MOTD {
+                //println!("{:?}", message);
+                self.server_motd.push_str(&message.params[1]);
+                self.server_motd.push_str("\r\n");
+            }
 
             if message.command == NumericReply::PING {
                 let reply = &format!("PONG :{reply}", reply=message.params[0]);
