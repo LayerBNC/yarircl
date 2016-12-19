@@ -7,6 +7,9 @@ pub enum NumericReply {
     RPL_CREATED,
     RPL_MYINFO,
     RPL_BOUNCE_OR_SERVER_INFO = 5,
+    RPL_WHOISUSER = 311,
+    RPL_WHOISSERVER = 312,
+    RPL_ENDOFWHOIS = 318,
     RPL_MOTDSTART = 375,
     RPL_MOTD = 372,
     RPL_ENDOFMOTD = 376,
@@ -30,6 +33,9 @@ impl FromStr for NumericReply {
             "004" => Ok(NumericReply::RPL_MYINFO),
             "005" => Ok(NumericReply::RPL_BOUNCE_OR_SERVER_INFO),
             "372" => Ok(NumericReply::RPL_MOTD),
+            "311" => Ok(NumericReply::RPL_WHOISUSER),
+            "312" => Ok(NumericReply::RPL_WHOISSERVER),
+            "318" => Ok(NumericReply::RPL_ENDOFWHOIS),
             "PING" => Ok(NumericReply::PING),
             _ => Ok(NumericReply::NONE)
         }
