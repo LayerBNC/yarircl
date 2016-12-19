@@ -63,6 +63,11 @@ impl <A: ToSocketAddrs> IrcClient<A> {
                 stream.send_raw_message(reply);
             }
 
+            if message.command == NumericReply::RPL_WHOISUSER {
+                let user = self.handle_whois(&message);
+                println!("{:?}", user);
+            }
+
             self.messages.push(message);
             return true;
         } 
@@ -71,10 +76,24 @@ impl <A: ToSocketAddrs> IrcClient<A> {
             return false;
         }
     }
+
+    fn handle_whois(&self, message: &IrcMessage) -> IrcUser {
+        let nick = &message.params[1];
+        let user = &message.params[2];
+        let host = &message.params[3];
+        let real_name = &message.params[5];
+
+        let mut user = IrcUser::new(nick, user);
+        user.set_realname(real_name);
+        user.set_hostname(host);
+
+        user
+    }
 }
 
 pub trait IrcWrite {
     fn send_raw_message(&mut self, msg: &str) -> Result<usize>;
+    fn join(&mut self, channel: &str) -> Result<usize>;
     fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize>;
     fn identify(&mut self, ns_name: &str, password: &str) -> Result<usize>;
 }
@@ -88,6 +107,10 @@ impl<S: Read + Write> IrcWrite for BufStream<S> {
         let flush_result = self.flush();
 
         write_result
+    }
+
+    fn join(&mut self, channel: &str) -> Result<usize> {
+        self.send_raw_message(&format!("JOIN {channel}", channel=channel))
     }
 
     fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize> {
