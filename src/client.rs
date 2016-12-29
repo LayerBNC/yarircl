@@ -73,7 +73,8 @@ impl<A: ToSocketAddrs> IrcClient<A> {
                                                 "znc.in/server-time-iso"];
                             want.retain(|&cap| self.supported_capabilities.contains(&String::from(cap)));
 
-                            let _ = stream.send_raw_message(&format!("CAP REQ :{caps}", caps = want.join(" ")));
+                            let _ =
+                                stream.send_raw_message(&format!("CAP REQ :{caps}", caps = want.join(" ")));
                         }
                         "ACK" => {
                             self.enabled_capabilities = message.params[2]
