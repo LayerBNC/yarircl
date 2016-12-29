@@ -18,7 +18,7 @@ pub struct IrcClient<A: ToSocketAddrs> {
 
 impl<A: ToSocketAddrs> IrcClient<A> {
     pub fn new(server: A, user: IrcUser) -> IrcClient<A> {
-        let mut client = IrcClient {
+        let client = IrcClient {
             server: server,
             user: user,
             connected: false,
@@ -38,7 +38,7 @@ impl<A: ToSocketAddrs> IrcClient<A> {
         let stream = TcpStream::connect(&self.server).unwrap();
         let mut bufstream = BufStream::new(stream);
 
-        bufstream.register_connection(&self.user);
+        let _ = bufstream.register_connection(&self.user);
 
         self.connected = true;
         return bufstream;
@@ -49,13 +49,13 @@ impl<A: ToSocketAddrs> IrcClient<A> {
         if stream.read_line(&mut buffer).unwrap() > 0 {
             let message = match IrcMessage::from_str(&buffer) {
                 Ok(x) => x,
-                Err(e) => return false,
+                Err(_) => return false,
             };
 
             match message.command {
                 NumericReply::PING => {
                     let reply = &format!("PONG :{reply}", reply = message.params[0]);
-                    stream.send_raw_message(reply);
+                    let _ = stream.send_raw_message(reply);
                 }
                 NumericReply::CAP => {
                     match &message.params[1][..] {
@@ -73,7 +73,7 @@ impl<A: ToSocketAddrs> IrcClient<A> {
                                                 "znc.in/server-time-iso"];
                             want.retain(|&cap| self.supported_capabilities.contains(&String::from(cap)));
 
-                            stream.send_raw_message(&format!("CAP REQ :{caps}", caps = want.join(" ")));
+                            let _ = stream.send_raw_message(&format!("CAP REQ :{caps}", caps = want.join(" ")));
                         }
                         "ACK" => {
                             self.enabled_capabilities = message.params[2]
@@ -85,7 +85,7 @@ impl<A: ToSocketAddrs> IrcClient<A> {
                             println!("Enabled capabilities: {}",
                                      self.enabled_capabilities.join(", "));
 
-                            stream.send_raw_message("CAP END");
+                            let _ = stream.send_raw_message("CAP END");
                         }
                         _ => {}
                     };
@@ -137,7 +137,7 @@ impl<S: Read + Write> IrcWrite for BufStream<S> {
         println!("<< {}", message);
 
         let write_result = self.write(message.as_bytes());
-        let flush_result = self.flush();
+        let _ = self.flush();
 
         write_result
     }

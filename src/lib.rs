@@ -1,6 +1,8 @@
 extern crate bufstream;
 
+#[allow(non_camel_case_types, unused_assignments)]
 mod message;
+#[allow(unused_assignments)]
 mod user;
 mod client;
 mod error;
