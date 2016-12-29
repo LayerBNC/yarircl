@@ -6,7 +6,7 @@ pub enum NumericReply {
     RPL_YOURHOST,
     RPL_CREATED,
     RPL_MYINFO,
-    RPL_BOUNCE_OR_SERVER_INFO = 5,
+    RPL_ISUPPORT = 5,
     RPL_WHOISUSER = 311,
     RPL_WHOISSERVER = 312,
     RPL_ENDOFWHOIS = 318,
@@ -17,6 +17,7 @@ pub enum NumericReply {
     PING = 65533,
     PRIVMSG = 65534,
     NOTICE = 65535,
+    CAP = 65536,
     NONE = -1,
 }
 
@@ -31,13 +32,14 @@ impl FromStr for NumericReply {
             "002" => Ok(NumericReply::RPL_YOURHOST),
             "003" => Ok(NumericReply::RPL_CREATED),
             "004" => Ok(NumericReply::RPL_MYINFO),
-            "005" => Ok(NumericReply::RPL_BOUNCE_OR_SERVER_INFO),
+            "005" => Ok(NumericReply::RPL_ISUPPORT),
             "372" => Ok(NumericReply::RPL_MOTD),
             "311" => Ok(NumericReply::RPL_WHOISUSER),
             "312" => Ok(NumericReply::RPL_WHOISSERVER),
             "318" => Ok(NumericReply::RPL_ENDOFWHOIS),
             "PING" => Ok(NumericReply::PING),
-            _ => Ok(NumericReply::NONE)
+            "CAP" => Ok(NumericReply::CAP),
+            _ => Ok(NumericReply::NONE),
         }
     }
 }
@@ -48,7 +50,7 @@ trait Substring {
 
 impl Substring for str {
     fn substr(&self, start: u32, length: u32) -> &str {
-        return &self[start as usize .. start as usize + length as usize];
+        return &self[start as usize..start as usize + length as usize];
     }
 }
 
@@ -57,7 +59,7 @@ pub struct IrcMessage {
     pub raw: String,
     pub prefix: String,
     pub command: NumericReply,
-    pub params: Vec<String>
+    pub params: Vec<String>,
 }
 
 impl PartialEq for IrcMessage {
@@ -81,25 +83,25 @@ impl FromStr for IrcMessage {
         if msg.starts_with(":") {
             let whitespace: u32 = match msg.find(' ') {
                 Some(x) => x as u32,
-                None => 0u32
+                None => 0u32,
             };
             prefix = match String::from_str(msg.substr(1, whitespace - 1)) {
                 Ok(x) => x,
-                Err(_) => return Err(String::from("error parsing message prefix"))
+                Err(_) => return Err(String::from("error parsing message prefix")),
             };
-            msg = msg.substr(whitespace + 1, msg.len() as u32 - (whitespace+1));
+            msg = msg.substr(whitespace + 1, msg.len() as u32 - (whitespace + 1));
         }
 
         if msg.contains(' ') {
             let idx = match msg.find(' ') {
                 Some(x) => x as u32,
-                None => 0u32
+                None => 0u32,
             };
             command = match NumericReply::from_str(msg.substr(0, idx)) {
-                    Ok(x) => x,
-                    Err(_) => return Err(format!("error parsing irc message {}", msg))
+                Ok(x) => x,
+                Err(_) => return Err(format!("error parsing irc message {}", msg)),
             };
-            msg = msg.substr(idx + 1, msg.len() as u32 - (idx+1));
+            msg = msg.substr(idx + 1, msg.len() as u32 - (idx + 1));
 
             // Parse parameters
             while msg != "" {
@@ -116,10 +118,10 @@ impl FromStr for IrcMessage {
 
                 let idx = match msg.find(' ') {
                     Some(x) => x as u32,
-                    None => 0u32
+                    None => 0u32,
                 };
                 params.push(String::from(msg.substr(0, idx)));
-                msg = msg.substr(idx+1, msg.len() as u32 - (idx+1));
+                msg = msg.substr(idx + 1, msg.len() as u32 - (idx + 1));
             }
         }
 
@@ -127,7 +129,7 @@ impl FromStr for IrcMessage {
             raw: raw_message_clone,
             prefix: prefix,
             command: command,
-            params: params
+            params: params,
         })
     }
 }

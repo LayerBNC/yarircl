@@ -6,7 +6,7 @@ pub struct IrcUser {
     pub user: String,
     pub real_name: String,
     pub hostname: String,
-    pub nickserv_password: String
+    pub nickserv_password: String,
 }
 
 impl IrcUser {
@@ -16,14 +16,14 @@ impl IrcUser {
             user: String::from(user),
             real_name: String::new(),
             hostname: String::new(),
-            nickserv_password: String::new()
+            nickserv_password: String::new(),
         }
     }
 
     pub fn set_password(&mut self, pw: &str) {
         self.nickserv_password = String::from(pw);
     }
-    
+
     pub fn set_realname(&mut self, real_name: &str) {
         self.real_name = String::from(real_name);
     }
@@ -35,9 +35,7 @@ impl IrcUser {
 
 impl PartialEq for IrcUser {
     fn eq(&self, other: &IrcUser) -> bool {
-        self.nick == other.nick &&
-        self.user == other.user &&
-        self.real_name == other.real_name &&
+        self.nick == other.nick && self.user == other.user && self.real_name == other.real_name &&
         self.nickserv_password == other.nickserv_password
     }
 }
@@ -46,7 +44,7 @@ impl PartialEq for IrcUser {
 pub struct Hostmask {
     pub nick: String,
     pub user: String,
-    pub host: String
+    pub host: String,
 }
 
 impl Hostmask {
@@ -54,7 +52,7 @@ impl Hostmask {
         Hostmask {
             nick: String::from(nick),
             user: String::from(user),
-            host: String::from(host)
+            host: String::from(host),
         }
     }
 }
@@ -70,17 +68,15 @@ impl FromStr for Hostmask {
             let (mut nick, mut user, mut host): (&str, &str, &str) = ("", "", "");
 
             if s.contains("!") {
-                nick = &s[0.. s.find("!").unwrap()];
-                user = &s[s.find("!").unwrap() + 1 .. s.find("@").unwrap()];
+                nick = &s[0..s.find("!").unwrap()];
+                user = &s[s.find("!").unwrap() + 1..s.find("@").unwrap()];
+            } else {
+                user = &s[0..s.find("@").unwrap()];
             }
-            else {
-                user = &s[0 .. s.find("@").unwrap()];
-            }
-            host = &s[s.find("@").unwrap() + 1 ..];
+            host = &s[s.find("@").unwrap() + 1..];
 
             Ok(Hostmask::new(nick, user, host))
-        }
-        else {
+        } else {
             Err(Error::InvalidHostmaskString)
         }
     }
@@ -88,14 +84,15 @@ impl FromStr for Hostmask {
 
 impl PartialEq for Hostmask {
     fn eq(&self, other: &Hostmask) -> bool {
-        self.nick == other.nick &&
-        self.user == other.user &&
-        self.host == other.host
+        self.nick == other.nick && self.user == other.user && self.host == other.host
     }
 }
 
 impl ToString for Hostmask {
     fn to_string(&self) -> String {
-        format!("{nick}!{user}@{host}", nick=self.nick, user=self.user, host=self.host)
+        format!("{nick}!{user}@{host}",
+                nick = self.nick,
+                user = self.user,
+                host = self.host)
     }
 }

@@ -1,9 +1,9 @@
-use user::IrcUser;
-use message::{IrcMessage, NumericReply};
-use std::net::{ToSocketAddrs, TcpStream};
-use std::io::*;
-use std::str::FromStr;
 use bufstream::BufStream;
+use message::{IrcMessage, NumericReply};
+use std::io::*;
+use std::net::{ToSocketAddrs, TcpStream};
+use std::str::FromStr;
+use user::IrcUser;
 
 #[derive(Debug)]
 pub struct IrcClient<A: ToSocketAddrs> {
@@ -11,17 +11,21 @@ pub struct IrcClient<A: ToSocketAddrs> {
     pub user: IrcUser,
     pub connected: bool,
     pub messages: Vec<IrcMessage>,
-    pub server_motd: String
+    pub server_motd: String,
+    pub supported_capabilities: Vec<String>,
+    pub enabled_capabilities: Vec<String>,
 }
 
-impl <A: ToSocketAddrs> IrcClient<A> {
+impl<A: ToSocketAddrs> IrcClient<A> {
     pub fn new(server: A, user: IrcUser) -> IrcClient<A> {
         let mut client = IrcClient {
             server: server,
             user: user,
             connected: false,
             messages: Vec::new(),
-            server_motd: String::new()
+            server_motd: String::new(),
+            supported_capabilities: Vec::new(),
+            enabled_capabilities: Vec::new(),
         };
 
         return client;
@@ -34,11 +38,7 @@ impl <A: ToSocketAddrs> IrcClient<A> {
         let stream = TcpStream::connect(&self.server).unwrap();
         let mut bufstream = BufStream::new(stream);
 
-        bufstream.send_raw_message(&format!("NICK {}\r\n", self.user.nick));
-        bufstream.send_raw_message(&format!("USER {} 0 * :{}\r\n", self.user.user, self.user.real_name));
-        if self.user.nickserv_password.len() > 0 {
-            bufstream.identify("nickserv", &self.user.nickserv_password);
-        }
+        bufstream.register_connection(&self.user);
 
         self.connected = true;
         return bufstream;
@@ -49,29 +49,61 @@ impl <A: ToSocketAddrs> IrcClient<A> {
         if stream.read_line(&mut buffer).unwrap() > 0 {
             let message = match IrcMessage::from_str(&buffer) {
                 Ok(x) => x,
-                Err(e) => return false
+                Err(e) => return false,
             };
 
-            if message.command == NumericReply::RPL_MOTD {
-                //println!("{:?}", message);
-                self.server_motd.push_str(&message.params[1]);
-                self.server_motd.push_str("\r\n");
-            }
+            match message.command {
+                NumericReply::PING => {
+                    let reply = &format!("PONG :{reply}", reply = message.params[0]);
+                    stream.send_raw_message(reply);
+                }
+                NumericReply::CAP => {
+                    match &message.params[1][..] {
+                        "LS" => {
+                            let caps: Vec<&str> = message.params[2].split(' ').collect();
+                            self.supported_capabilities.extend(caps.iter()
+                                .map(|&x| String::from(x))
+                                .collect::<Vec<String>>());
 
-            if message.command == NumericReply::PING {
-                let reply = &format!("PONG :{reply}", reply=message.params[0]);
-                stream.send_raw_message(reply);
-            }
+                            // TODO: support cap values
 
-            if message.command == NumericReply::RPL_WHOISUSER {
-                let user = self.handle_whois(&message);
-                println!("{:?}", user);
-            }
+                            let mut want = vec!["multi-prefix",
+                                                "server-time",
+                                                "extended-join",
+                                                "znc.in/server-time-iso"];
+                            want.retain(|&cap| self.supported_capabilities.contains(&String::from(cap)));
+
+                            stream.send_raw_message(&format!("CAP REQ :{caps}", caps = want.join(" ")));
+                        }
+                        "ACK" => {
+                            self.enabled_capabilities = message.params[2]
+                                .split(' ')
+                                .collect::<Vec<&str>>()
+                                .iter()
+                                .map(|&x| String::from(x.trim()))
+                                .collect();
+                            println!("Enabled capabilities: {}",
+                                     self.enabled_capabilities.join(", "));
+
+                            stream.send_raw_message("CAP END");
+                        }
+                        _ => {}
+                    };
+                }
+                NumericReply::RPL_MOTD => {
+                    self.server_motd.push_str(&message.params[1]);
+                    self.server_motd.push_str("\r\n");
+                }
+                NumericReply::RPL_WHOISUSER => {
+                    let user = self.handle_whois(&message);
+                    println!("{:?}", user);
+                }
+                _ => {}
+            };
 
             self.messages.push(message);
             return true;
-        } 
-        else {
+        } else {
             self.connected = false;
             return false;
         }
@@ -95,13 +127,14 @@ pub trait IrcWrite {
     fn send_raw_message(&mut self, msg: &str) -> Result<usize>;
     fn join(&mut self, channel: &str) -> Result<usize>;
     fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize>;
-    fn identify(&mut self, ns_name: &str, password: &str) -> Result<usize>;
+    fn register_connection(&mut self, user: &IrcUser) -> Result<usize>;
 }
 
 impl<S: Read + Write> IrcWrite for BufStream<S> {
     fn send_raw_message(&mut self, msg: &str) -> Result<usize> {
         let mut message = String::from(msg);
         message = message + "\r\n";
+        println!("<< {}", message);
 
         let write_result = self.write(message.as_bytes());
         let flush_result = self.flush();
@@ -110,7 +143,7 @@ impl<S: Read + Write> IrcWrite for BufStream<S> {
     }
 
     fn join(&mut self, channel: &str) -> Result<usize> {
-        self.send_raw_message(&format!("JOIN {channel}", channel=channel))
+        self.send_raw_message(&format!("JOIN {channel}", channel = channel))
     }
 
     fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize> {
@@ -122,10 +155,33 @@ impl<S: Read + Write> IrcWrite for BufStream<S> {
         self.send_raw_message(&message)
     }
 
-    fn identify(&mut self, ns_name: &str, password: &str) -> Result<usize> {
-        let mut message = String::from("identify ");
-        message += password;
+    fn register_connection(&mut self, user: &IrcUser) -> Result<usize> {
+        let mut bytes_written: usize = 0;
+        match self.send_raw_message("CAP LS") {
+            Ok(x) => bytes_written += x,
+            Err(e) => return Err(e),
+        };
 
-        self.send_message(ns_name, &message)
+        // Only send PASS if we defined it
+        if user.nickserv_password.len() > 0 {
+            match self.send_raw_message(&format!("PASS {pass}", pass = user.nickserv_password)) {
+                Ok(x) => bytes_written += x,
+                Err(e) => return Err(e),
+            };
+        }
+
+        match self.send_raw_message(&format!("NICK {nick}", nick = user.nick)) {
+            Ok(x) => bytes_written += x,
+            Err(e) => return Err(e),
+        };
+
+        match self.send_raw_message(&format!("USER {user} 0 * :{realname}",
+                                             user = user.user,
+                                             realname = user.real_name)) {
+            Ok(x) => bytes_written += x,
+            Err(e) => return Err(e),
+        };
+
+        Ok(bytes_written)
     }
 }

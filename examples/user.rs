@@ -23,14 +23,11 @@ fn main() {
             println!("{:?}", curr_msg);
             if curr_msg.params[1] == "!ping" {
                 stream.send_message(&curr_msg.params[0], "Hello there!");
-            }
-            else if curr_msg.params[1] == "!motd" {
+            } else if curr_msg.params[1] == "!motd" {
                 println!("MOTD is:\r\n{}", client.server_motd);
-            }
-            else if curr_msg.params[1] == "!whois" {
+            } else if curr_msg.params[1] == "!whois" {
                 stream.send_raw_message("WHOIS Phrohdoh");
-            }
-            else if curr_msg.params[1] == "!join" {
+            } else if curr_msg.params[1] == "!join" {
                 stream.join("#orcaware");
             }
         }
