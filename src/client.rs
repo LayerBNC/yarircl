@@ -129,6 +129,7 @@ pub trait IrcWrite {
     fn send_raw_message(&mut self, msg: &str) -> Result<usize>;
     fn join(&mut self, channel: &str) -> Result<usize>;
     fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize>;
+    fn send_notice(&mut self, destination: &str, msg: &str) -> Result<usize>;
     fn register_connection(&mut self, user: &IrcUser) -> Result<usize>;
 }
 
@@ -148,10 +149,13 @@ impl<S: Read + Write> IrcWrite for BufStream<S> {
     }
 
     fn send_message(&mut self, destination: &str, msg: &str) -> Result<usize> {
-        let mut message = String::from("PRIVMSG ");
-        message += destination;
-        message += " :";
-        message += msg;
+        let message = &format!("PRIVMSG {dest} :{msg}", dest = destination, msg = msg);
+
+        self.send_raw_message(&message)
+    }
+
+    fn send_notice(&mut self, destination: &str, msg: &str) -> Result<usize> {
+        let message = &format!("NOTICE {dest} :{msg}", dest = destination, msg = msg);
 
         self.send_raw_message(&message)
     }
