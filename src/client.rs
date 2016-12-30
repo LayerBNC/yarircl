@@ -134,9 +134,8 @@ pub trait IrcWrite {
 
 impl<S: Read + Write> IrcWrite for BufStream<S> {
     fn send_raw_message(&mut self, msg: &str) -> Result<usize> {
-        let mut message = String::from(msg);
-        message = message + "\r\n";
-        println!("<< {}", message);
+        let message = format!("{msg}\r\n", msg = msg);
+        print!("<< {}", message);
 
         let write_result = self.write(message.as_bytes());
         let _ = self.flush();
