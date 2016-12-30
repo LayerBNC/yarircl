@@ -81,7 +81,8 @@ impl<A: ToSocketAddrs> IrcClient<A> {
                                 .split(' ')
                                 .collect::<Vec<&str>>()
                                 .iter()
-                                .map(|&x| String::from(x.trim()))
+                                .map(|&x| String::from(x))
+                                .filter(|x| x.len() > 0)
                                 .collect();
                             println!("Enabled capabilities: {}",
                                      self.enabled_capabilities.join(", "));
